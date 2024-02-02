@@ -1,0 +1,7 @@
+root_dir: "dataset/ppg-bp/PPG-BP Database/Data File"
+data_info_file: "PPG-BP dataset.xlsx"
+data_dir: "0_subject"
+samples_per_subject: 3
+
+
+
