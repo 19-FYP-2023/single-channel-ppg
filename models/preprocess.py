@@ -2,14 +2,14 @@ import os
 import pandas as pd
 
 data_entc = pd.read_csv("dataset/paraqum-dataset/good_signal_labels.csv")
-paths = ["dataset/paraqum-dataset/data-captures/data02052019/sensor2","dataset/paraqum-dataset/data-captures/data02052019", "dataset/paraqum-dataset/data-captures/data16012019" ]
+paths = ["data-captures/data02052019/sensor2","data-captures/data02052019", "data-captures/data16012019" ]
 
 data_entc["Path"] = ""
 for index, row in data_entc.iterrows():
 
     for path in paths:
         count = 0
-        if os.path.exists(f"{path}/{row['File Name']}"):
+        if os.path.exists(f"dataset/paraqum-dataset/{path}/{row['File Name']}"):
             data_entc.at[index, "Path"] = f"{path}/{row['File Name']}"
 
             
