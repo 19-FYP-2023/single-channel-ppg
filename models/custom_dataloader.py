@@ -1,6 +1,7 @@
 import os
 import torch
 import numpy as np 
+import pandas as pd
 import matplotlib.pyplot as plt 
 from torch.utils.data import Dataset, DataLoader 
 from openpyxl import load_workbook
@@ -50,3 +51,30 @@ class PpgBpDataset(Dataset):
         return data_sample, subject_id, sysbp, diabp
 
 
+class ENTCDataset(Dataset):
+    def __init__(self, root_dir, transforms=None):
+        self.root_dir = root_dir
+        self.label_path = self.root_dir + "good_signal_labels_with_paths.csv"
+        self.label_csv = pd.read_csv(self.label_path)
+
+    def __len__(self):
+        return self.label_csv.shape[0]
+    
+    def __getitem__(self, idx):
+        data_sample_path = self.root_dir + self.label_csv.iloc[idx]["Path"]
+        data_sample_frame = pd.read_csv(data_sample_path)
+
+        rows_to_drop = list(range(0,8))
+        data_sample_frame.drop(rows_to_drop, inplace=True)
+
+        data_sample_frame[["VATA", "PITTA", "KAPHA"]] = data_sample_frame[list(data_sample_frame.columns)[0]].apply(lambda x: pd.Series(str(x).strip().split(" ")))
+        data_sample_frame["VATA"] = data_sample_frame["VATA"].apply(lambda x: int(x))
+        data_sample_frame["PITTA"] = data_sample_frame["PITTA"].apply(lambda x: int(x))
+        data_sample_frame["KAPHA"] = data_sample_frame["KAPHA"].apply(lambda x: int(x))
+
+        data_sample_frame = data_sample_frame.reset_index()
+
+        data_sample_frame.drop(list(data_sample_frame.columns)[:2], axis=1, inplace=True)
+
+        data_sample = data_sample_frame.to_numpy()
+        return data_sample
