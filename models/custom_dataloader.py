@@ -2,6 +2,7 @@ import os
 import torch
 import numpy as np 
 import pandas as pd
+import h5py
 import matplotlib.pyplot as plt 
 from torch.utils.data import Dataset, DataLoader 
 from openpyxl import load_workbook
@@ -78,3 +79,27 @@ class ENTCDataset(Dataset):
 
         data_sample = data_sample_frame.to_numpy()
         return data_sample
+    
+
+class UCIBPDataset(Dataset):
+
+    def __init__(self, root_dir):
+        self.root = root_dir
+        self.count = []
+
+        for i in range(0, 4):
+            with h5py.File(f"{self.root}/Part_{i+1}.mat", "r") as f:
+                self.count.append(len(f[f"Part_{i+1}"]))
+
+
+    def __len__(self):
+        return sum(self.count)
+
+    def __getitem__(self, idx):
+        partition_idx = idx//3000 
+        sample_idx = idx%3000
+
+        with h5py.File(f"{self.root}/Part_{partition_idx+1}.mat", "r") as f:
+            data_sample_ppg = f[f[f"Part_{partition_idx+1}"][sample_idx][0]][:, 0]
+            data_sample_abp = f[f[f"Part_{partition_idx+1}"][sample_idx][0]][:, 1]
+            return data_sample_ppg, data_sample_abp
