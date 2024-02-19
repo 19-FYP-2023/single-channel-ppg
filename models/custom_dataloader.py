@@ -42,7 +42,7 @@ class PpgBpDataset(Dataset):
         row_idx = 3 + dataset_idx
         subject_id = self.info_sheet.cell(row_idx, self.subject_col_idx).value
         sysbp = self.info_sheet.cell(row_idx, self.sysbp_col_idx).value
-        diabp = self.info_sheet.cell(row_idx, self.diabp_col_idx).value
+        diabp = self.info_sheet.cell(row_idx, self.diasbp_col_idx).value
 
         data_sample_path = f"{self.root_dir}/{self.data_dir}/{subject_id}_{sample_num}.txt"
 
@@ -90,7 +90,6 @@ class UCIBPDataset(Dataset):
         for i in range(0, 4):
             with h5py.File(f"{self.root}/Part_{i+1}.mat", "r") as f:
                 self.count.append(len(f[f"Part_{i+1}"]))
-
 
     def __len__(self):
         return sum(self.count)
