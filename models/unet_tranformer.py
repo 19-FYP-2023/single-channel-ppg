@@ -119,15 +119,26 @@ class AttentionWithPositionalEncoding(nn.Module):
         output = torch.matmul(attention_weights, transformed_value)
 
         return output 
-    
+
+class FeedForwardLayer(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.ffn = nn.Sequential(
+            nn.Linear(1024, 1024),
+            nn.GELU(),
+            nn.Linear(1024, 1024)
+        )
+
+    def forward(self, x):
+        return self.ffn(x)
+
 
 class ppgUnet(nn.Module):
-    def __init__(self, in_channels, num_classes, bilinear=True):
+    def __init__(self, in_channels):
         super().__init__()
 
         self.in_channels = in_channels
-        self.num_classes = num_classes
-        self.bilinear = bilinear 
 
         self.down_conv1 = DoubleConv(in_channels=in_channels, out_channels=32, first_stride=1, second_stride=1, skip_stride=1, initial_block=True)
         self.down_conv2 = DoubleConv(in_channels=32, out_channels=64, first_stride=2, second_stride=1, skip_stride=2)
@@ -140,11 +151,13 @@ class ppgUnet(nn.Module):
         self.posencoding2 = PositionalEncoding(embedding_size=64, embedding_length=512, level=2)
         self.posencoding3 = PositionalEncoding(embedding_size=128, embedding_length=256, level=3)
         self.posencoding4 = PositionalEncoding(embedding_size=256, embedding_length=128, level=4)
+        self.posencodingfinal = PositionalEncoding(embedding_size=32, embedding_length=1024, level="final")
 
         self.attn1 = AttentionWithPositionalEncoding(query_dim=1024, key_dim=1024, value_dim=1024, output_dim=1024)
         self.attn2 = AttentionWithPositionalEncoding(query_dim=512, key_dim=512, value_dim=512, output_dim=512)
         self.attn3 = AttentionWithPositionalEncoding(query_dim=256, key_dim=256, value_dim=256, output_dim=256)
-        self.crossattn4 = AttentionWithPositionalEncoding(query_dim=128, key_dim=128, value_dim=128, output_dim=128)
+        self.attn4 = AttentionWithPositionalEncoding(query_dim=128, key_dim=128, value_dim=128, output_dim=128)
+        self.attnfinal = AttentionWithPositionalEncoding(query_dim=1024, key_dim=1024, value_dim=1024, output_dim=1024)
 
         self.up_conv1 = DoubleConv(in_channels=768, out_channels=256, first_stride=1, second_stride=1, skip_stride=1)
         self.up_conv2 = DoubleConv(in_channels=384, out_channels=128, first_stride=1, second_stride=1, skip_stride=1)
@@ -156,7 +169,7 @@ class ppgUnet(nn.Module):
         self.upsampling3 = UpSample(in_channels=128, out_channels=128, scale_factor=2)
         self.upsampling4 = UpSample(in_channels=64, out_channels=64, scale_factor=2)
 
-
+        self.feedforward = FeedForwardLayer()
 
         def forward(self,x):
             down_conv1 = self.down_conv1(x)
@@ -166,15 +179,16 @@ class ppgUnet(nn.Module):
             down_conv5 = self.down_conv5(down_conv4)
             bottleneck = self.bottleneck(down_conv5)
 
-            posencoded_conv1 = self.posencoding(down_conv1)
-            posencoded_conv2 = self.posencoding(down_conv2)
-            posencoded_conv3 = self.posencoding(down_conv3)
-            posencoded_conv4 = self.posencoding(down_conv4)
+            posencoded_conv1 = self.posencoding1(down_conv1)
+            posencoded_conv2 = self.posencoding2(down_conv2)
+            posencoded_conv3 = self.posencoding3(down_conv3)
+            posencoded_conv4 = self.posencoding4(down_conv4)
 
             attn1 = self.attn1(posencoded_conv1, posencoded_conv1, posencoded_conv1)
             attn2 = self.attn2(posencoded_conv2, posencoded_conv2, posencoded_conv2)
             attn3 = self.attn3(posencoded_conv3, posencoded_conv3, posencoded_conv3)
             attn4 = self.attn4(posencoded_conv4, posencoded_conv4, posencoded_conv4)
+           
 
             upsampling1 = self.upsampling1(bottleneck)
             concat1 = torch.cat((upsampling1, attn4), dim=1)
@@ -192,7 +206,15 @@ class ppgUnet(nn.Module):
             concat4 = torch.cat((upsampling4, attn1), dim=1)
             upconv_4 = self.up_conv4(concat4)
 
-            return upconv_4 
+
+            posencoded_final = self.posencodingfinal(upconv_4)
+            attnfinal = self.attfinal(posencoded_final, posencoded_final, posencoded_final)
+
+            attnout = attnfinal[:, 0]
+
+            out = self.feedforward(attnout)
+
+            return out
         
 
         
