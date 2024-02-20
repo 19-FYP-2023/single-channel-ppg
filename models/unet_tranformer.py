@@ -78,7 +78,7 @@ class UpSample(nn.Module):
     
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, embedding_size, embedding_length, level):
+    def __init__(self, embedding_size, embedding_length):
         super().__init__()
 
         self.embedding_size = embedding_size
@@ -91,7 +91,7 @@ class PositionalEncoding(nn.Module):
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
 
-        self.register_buffer(f'pe_{level}', pe)
+        self.register_buffer(f"pe", pe)
 
 
 class AttentionWithPositionalEncoding(nn.Module):
@@ -118,7 +118,7 @@ class AttentionWithPositionalEncoding(nn.Module):
 
         output = torch.matmul(attention_weights, transformed_value)
 
-        return attention_weights, output 
+        return output 
 
 class FeedForwardLayer(nn.Module):
     def __init__(self):
@@ -134,96 +134,86 @@ class FeedForwardLayer(nn.Module):
         return self.ffn(x)
 
 
-### Need to rewrite based on the above classes
-# class PPGUnet(nn.Module):
-#     def __init__(self, in_channels):
-#         super().__init__()
+## Need to rewrite based on the above classes
+class PPGUnet(nn.Module):
+    def __init__(self, in_channels):
+        super().__init__()
 
-#         self.in_channels = in_channels
+        self.in_channels = in_channels
 
-#         self.down_conv1 = DoubleConv(in_channels=in_channels, out_channels=32, first_stride=1, second_stride=1, skip_stride=1, initial_block=True)
-#         self.down_conv2 = DoubleConv(in_channels=32, out_channels=64, first_stride=2, second_stride=1, skip_stride=2)
-#         self.down_conv3 = DoubleConv(inc_channels=64, out_channels=128, first_stride=2, second_stride=1, skip_stride=2)
-#         self.down_conv4 = DoubleConv(in_channels=128, out_channels=256, first_stride=2, second_stride=1, skip_stride=2)
-#         self.down_conv5 = DoubleConv(in_channels=256, out_channels=512, first_stride=2, second_stride=1, skip_stride=2)
-#         self.bottleneck = DoubleConv(in_channels=512, out_channels=512, first_stride=1, second_stride=1)
+        self.down_conv_layer1 = DoubleConv(in_channels=in_channels, out_channels=32, first_stride=1, second_stride=1, skip_stride=1, initial_block=True, first_padding=1, second_padding=1)
+        self.down_conv_layer2 = DoubleConv(in_channels=32, out_channels=64, first_stride=2, second_stride=1, skip_stride=2, first_padding=1, second_padding=1)
+        self.down_conv_layer3 = DoubleConv(in_channels=64, out_channels=128, first_stride=2, second_stride=1, skip_stride=2, first_padding=1, second_padding=1)
+        self.down_conv_layer4 = DoubleConv(in_channels=128, out_channels=256, first_stride=2, second_stride=1, skip_stride=2, first_padding=1, second_padding=1)
+        self.down_conv_layer5 = DoubleConv(in_channels=256, out_channels=512, first_stride=2, second_stride=1, skip_stride=2, first_padding=1, second_padding=1)
+        self.bottleneck_layer = Bottleneck(in_channels=512, out_channels=512, first_stride=1, second_stride=1, first_padding=1, second_padding=1)
 
-#         self.posencoding1 = PositionalEncoding(embedding_size=32, embedding_length=1024, level=1)
-#         self.posencoding2 = PositionalEncoding(embedding_size=64, embedding_length=512, level=2)
-#         self.posencoding3 = PositionalEncoding(embedding_size=128, embedding_length=256, level=3)
-#         self.posencoding4 = PositionalEncoding(embedding_size=256, embedding_length=128, level=4)
-#         self.posencodingfinal = PositionalEncoding(embedding_size=32, embedding_length=1024, level="final")
+        self.posencoding1 = PositionalEncoding(embedding_size=32, embedding_length=1024)
+        self.posencoding2 = PositionalEncoding(embedding_size=64, embedding_length=512)
+        self.posencoding3 = PositionalEncoding(embedding_size=128, embedding_length=256)
+        self.posencoding4 = PositionalEncoding(embedding_size=256, embedding_length=128)
+        self.posencodingfinal = PositionalEncoding(embedding_size=32, embedding_length=1024)
 
-#         self.attn1 = AttentionWithPositionalEncoding(query_dim=1024, key_dim=1024, value_dim=1024, output_dim=1024)
-#         self.attn2 = AttentionWithPositionalEncoding(query_dim=512, key_dim=512, value_dim=512, output_dim=512)
-#         self.attn3 = AttentionWithPositionalEncoding(query_dim=256, key_dim=256, value_dim=256, output_dim=256)
-#         self.attn4 = AttentionWithPositionalEncoding(query_dim=128, key_dim=128, value_dim=128, output_dim=128)
-#         self.attnfinal = AttentionWithPositionalEncoding(query_dim=1024, key_dim=1024, value_dim=1024, output_dim=1024)
+        self.attn_layer1 = AttentionWithPositionalEncoding(query_dim=1024, key_dim=1024, value_dim=1024, output_dim=1024)
+        self.attn_layer2 = AttentionWithPositionalEncoding(query_dim=512, key_dim=512, value_dim=512, output_dim=512)
+        self.attn_layer3 = AttentionWithPositionalEncoding(query_dim=256, key_dim=256, value_dim=256, output_dim=256)
+        self.attn_layer4 = AttentionWithPositionalEncoding(query_dim=128, key_dim=128, value_dim=128, output_dim=128)
+        self.attn_layerfinal = AttentionWithPositionalEncoding(query_dim=1024, key_dim=1024, value_dim=1024, output_dim=1024)
 
-#         self.up_conv1 = DoubleConv(in_channels=768, out_channels=256, first_stride=1, second_stride=1, skip_stride=1)
-#         self.up_conv2 = DoubleConv(in_channels=384, out_channels=128, first_stride=1, second_stride=1, skip_stride=1)
-#         self.up_conv3 = DoubleConv(in_channels=192, out_channels=64, first_stride=1, second_stride=1, skip_stride=1)
-#         self.up_conv4 = DoubleConv(in_channels=96, out_channels=32, first_stride=1, second_stride=1, skip_stride=1)
+        self.up_conv_layer1 = DoubleConv(in_channels=768, out_channels=256, first_stride=1, second_stride=1, skip_stride=1, first_padding=1, second_padding=1)
+        self.up_conv_layer2 = DoubleConv(in_channels=384, out_channels=128, first_stride=1, second_stride=1, skip_stride=1, first_padding=1, second_padding=1)
+        self.up_conv_layer3 = DoubleConv(in_channels=192, out_channels=64, first_stride=1, second_stride=1, skip_stride=1, first_padding=1, second_padding=1)
+        self.up_conv_layer4 = DoubleConv(in_channels=96, out_channels=32, first_stride=1, second_stride=1, skip_stride=1, first_padding=1, second_padding=1)
 
-#         self.upsampling1 = UpSample(in_channels=512, out_channels=512, scale_factor=2)
-#         self.upsampling2 = UpSample(in_channels=256, out_channels=256, scale_factor=2)
-#         self.upsampling3 = UpSample(in_channels=128, out_channels=128, scale_factor=2)
-#         self.upsampling4 = UpSample(in_channels=64, out_channels=64, scale_factor=2)
+        self.upsampling_layer1 = UpSample(in_channels=512, out_channels=512, scale_factor=2)
+        self.upsampling_layer2 = UpSample(in_channels=256, out_channels=256, scale_factor=2)
+        self.upsampling_layer3 = UpSample(in_channels=128, out_channels=128, scale_factor=2)
+        self.upsampling_layer4 = UpSample(in_channels=64, out_channels=64, scale_factor=2)
 
-#         self.feedforward = FeedForwardLayer()
+        self.feedforward = FeedForwardLayer()
 
-#         def forward(self,x):
-#             down_conv1 = self.down_conv1(x)
-#             down_conv2 = self.down_conv2(down_conv1)
-#             down_conv3 = self.down_conv3(down_conv2)
-#             down_conv4 = self.down_conv4(down_conv3)
-#             down_conv5 = self.down_conv5(down_conv4)
-#             bottleneck = self.bottleneck(down_conv5)
+    def forward(self,x):
+        down_conv1 = self.down_conv_layer1(x)
+        down_conv2 = self.down_conv_layer2(down_conv1)
+        down_conv3 = self.down_conv_layer3(down_conv2)
+        down_conv4 = self.down_conv_layer4(down_conv3)
+        down_conv5 = self.down_conv_layer5(down_conv4)
+        bottleneck = self.bottleneck_layer(down_conv5)
 
-#             posencoded_conv1 = self.posencoding1(down_conv1)
-#             posencoded_conv2 = self.posencoding2(down_conv2)
-#             posencoded_conv3 = self.posencoding3(down_conv3)
-#             posencoded_conv4 = self.posencoding4(down_conv4)
+        posencoded_conv1 = self.posencoding1.pe + down_conv1
+        posencoded_conv2 = self.posencoding2.pe + down_conv2
+        posencoded_conv3 = self.posencoding3.pe + down_conv3
+        posencoded_conv4 = self.posencoding4.pe + down_conv4
 
-#             attn1 = self.attn1(posencoded_conv1, posencoded_conv1, posencoded_conv1)
-#             attn2 = self.attn2(posencoded_conv2, posencoded_conv2, posencoded_conv2)
-#             attn3 = self.attn3(posencoded_conv3, posencoded_conv3, posencoded_conv3)
-#             attn4 = self.attn4(posencoded_conv4, posencoded_conv4, posencoded_conv4)
-           
-
-#             upsampling1 = self.upsampling1(bottleneck)
-#             concat1 = torch.cat((upsampling1, attn4), dim=1)
-#             upconv_1  = self.up_conv1(concat1)
-
-#             upsampling2 = self.upsampling2(upconv_1)
-#             concat2 = torch.cat((upsampling2, attn3), dim=1)
-#             upconv_2 = self.up_conv2(concat2)
-
-#             upsampling3 = self.upsampling3(upconv_2)
-#             concat3 = torch.cat((upsampling3, attn2), dim=1)
-#             upconv_3 = self.up_conv3(concat3)
-
-#             upsampling4 = self.upsampling4(upconv_3)
-#             concat4 = torch.cat((upsampling4, attn1), dim=1)
-#             upconv_4 = self.up_conv4(concat4)
-
-
-#             posencoded_final = self.posencodingfinal(upconv_4)
-#             attnfinal = self.attfinal(posencoded_final, posencoded_final, posencoded_final)
-
-#             attnout = attnfinal[:, 0]
-
-#             out = self.feedforward(attnout)
-
-#             return out
+        attn1 = self.attn_layer1(posencoded_conv1, posencoded_conv1, posencoded_conv1)
+        attn2 = self.attn_layer2(posencoded_conv2, posencoded_conv2, posencoded_conv2)
+        attn3 = self.attn_layer3(posencoded_conv3, posencoded_conv3, posencoded_conv3)
+        attn4 = self.attn_layer4(posencoded_conv4, posencoded_conv4, posencoded_conv4)
         
 
-        
+        upsampling1 = self.upsampling_layer1(bottleneck)
+        concat1 = torch.cat((upsampling1 , attn4), dim=1)
+        upconv_1  = self.up_conv_layer1(concat1)
+
+        upsampling2 = self.upsampling_layer2(upconv_1)
+        concat2 = torch.cat((upsampling2, attn3), dim=1)
+        upconv_2 = self.up_conv_layer2(concat2)
+
+        upsampling3 = self.upsampling_layer3(upconv_2)
+        concat3 = torch.cat((upsampling3, attn2), dim=1)
+        upconv_3 = self.up_conv_layer3(concat3)
+
+        upsampling4 = self.upsampling_layer4(upconv_3)
+        concat4 = torch.cat((upsampling4, attn1), dim=1)
+        upconv_4 = self.up_conv_layer4(concat4)
 
 
+        posencoded_final = self.posencodingfinal.pe + upconv_4
+        attnfinal = self.attn_layerfinal(posencoded_final, posencoded_final, posencoded_final)
 
+        attnout = attnfinal[:, 0]
 
+        out = self.feedforward(attnout)
 
-
-
-    
+        out = out.unsqueeze(1)
+        return out
