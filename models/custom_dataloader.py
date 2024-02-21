@@ -33,7 +33,7 @@ class PpgBpDataset(Dataset):
         # print(num_col_idx, self.subject_col_idx, sysbp_col_idx, diabp_col_idx)
 
     def __len__(self):
-        return self.info_sheet.cell(self.info_sheet.max_row, 0).value * self.samples_per_subject
+        return self.info_sheet.cell(self.info_sheet.max_row, 1).value * self.samples_per_subject
 
     def __getitem__(self, idx):
         dataset_idx = int(idx/self.samples_per_subject)
@@ -42,7 +42,7 @@ class PpgBpDataset(Dataset):
         row_idx = 3 + dataset_idx
         subject_id = self.info_sheet.cell(row_idx, self.subject_col_idx).value
         sysbp = self.info_sheet.cell(row_idx, self.sysbp_col_idx).value
-        diabp = self.info_sheet.cell(row_idx, self.diasbp_col_idx).value
+        diabp = self.info_sheet.cell(row_idx, self.diabp_col_idx).value
 
         data_sample_path = f"{self.root_dir}/{self.data_dir}/{subject_id}_{sample_num}.txt"
 
@@ -78,7 +78,8 @@ class ENTCDataset(Dataset):
         data_sample_frame.drop(list(data_sample_frame.columns)[:2], axis=1, inplace=True)
 
         data_sample = data_sample_frame.to_numpy()
-        return data_sample
+        data_sample = data_sample.T
+        return data_sample[:, :1024]
     
 
 class UCIBPDataset(Dataset):
