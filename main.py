@@ -76,5 +76,10 @@ def main():
         print(f"Epoch {epoch+1} / {num_epochs}, Valid Loss: {valid_loss:.4f}")
 
 
+        model_save_path = f"checkpoints/PPGUnet_epoch{epoch}.pth"
+        torch.save(model.state_dict(), model_save_path)
+
+
+
 if __name__ == "__main__":
     main()
