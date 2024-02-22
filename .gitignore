@@ -1,5 +1,6 @@
 temp.ipynb
 dataset/
 logs/
+checkpoints/
 models/_pycache_
 */tempfile.py
