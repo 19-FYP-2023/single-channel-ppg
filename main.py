@@ -6,6 +6,7 @@ from torch.utils.data import DataLoader
 from models.unet_tranformer import PPGUnet
 from models.custom_dataloader import ENTCDataset
 from models.log import readable_time
+from torch.optim.lr_scheduler import ExponentialLR
 
 # logging file configuration
 logging.basicConfig(filename=f"logs/{readable_time()}.log", level=logging.INFO)
@@ -22,6 +23,7 @@ num_epochs = 300
 model = PPGUnet(in_channels=1).to(device)
 criterion = nn.L1Loss()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+scheduler = ExponentialLR(optimizer, gamma=0.992354)
 
 # dataloader configuration
 train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True)
@@ -53,6 +55,9 @@ def main():
 
         logging.info(f"Epoch {epoch+1} / {num_epochs}, Train Loss: {train_loss:.4f}")
         print(f"Epoch {epoch+1} / {num_epochs}, Train Loss: {train_loss:.4f}")
+
+        # Adjusting learning rate
+        scheduler.step()
 
         model.eval()
 

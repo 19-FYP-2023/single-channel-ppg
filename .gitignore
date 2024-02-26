@@ -1,5 +1,7 @@
 temp.ipynb
 dataset/
 logs/
-models/_pycache_
+models/__pycache__
 */tempfile.py
+checkpoints/
+VS-Code---How-to-change-title-bar-style-on-Visual-Studio-Code
