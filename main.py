@@ -80,9 +80,10 @@ def main():
         logging.info(f"Epoch {epoch+1} / {num_epochs}, Valid Loss: {valid_loss:.4f}")
         print(f"Epoch {epoch+1} / {num_epochs}, Valid Loss: {valid_loss:.4f}")
 
-
-        model_save_path = f"checkpoints/PPGUnet_epoch{epoch}.pth"
-        torch.save(model.state_dict(), model_save_path)
+        # Change save directory based on the experiment
+        if (epoch+1) % 5 == 0:
+            model_save_path = f"checkpoints/vatta-pitta/PPGUnet_epoch{epoch}.pth"
+            torch.save(model.state_dict(), model_save_path)
 
 
 
