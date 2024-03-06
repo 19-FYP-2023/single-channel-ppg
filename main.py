@@ -141,8 +141,6 @@ def train_ucibp():
 
                     input, target = data_sample
 
-                    print(type(input), type(target))
-
                     input = input.unsqueeze(1).to(device)
                     target = target.unsqueeze(1).to(device)
 
