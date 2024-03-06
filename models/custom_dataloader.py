@@ -3,6 +3,7 @@ import torch
 import numpy as np 
 import pandas as pd
 import h5py
+from models.resample import resample
 import matplotlib.pyplot as plt 
 from torch.utils.data import Dataset, DataLoader 
 from openpyxl import load_workbook
@@ -102,4 +103,18 @@ class UCIBPDataset(Dataset):
         with h5py.File(f"{self.root}/Part_{partition_idx+1}.mat", "r") as f:
             data_sample_ppg = f[f[f"Part_{partition_idx+1}"][sample_idx][0]][:, 0]
             data_sample_abp = f[f[f"Part_{partition_idx+1}"][sample_idx][0]][:, 1]
-            return data_sample_ppg, data_sample_abp
+
+            abp_max = 200
+            abp_min = 50
+            ppg_max = 4.003
+            ppg_min = 0.0
+
+            original_freq = 150
+            target_freq = 1000
+
+            upsample_factor = target_freq/original_freq
+
+            data_sample_ppg = resample(data_sample_ppg[:1024], int(upsample_factor*1024)).astype(np.float32)
+            data_sample_abp = resample(data_sample_abp[:1024], int(upsample_factor*1024)).astype(np.float32)
+
+            return data_sample_ppg[:1024], data_sample_abp[:1024]
