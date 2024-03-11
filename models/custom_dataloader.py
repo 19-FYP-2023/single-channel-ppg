@@ -101,16 +101,16 @@ class UCIBPDataset(Dataset):
         sample_idx = idx%3000
 
         with h5py.File(f"{self.root}/Part_{partition_idx+1}.mat", "r") as f:
-            data_sample_ppg = f[f[f"Part_{partition_idx+1}"][sample_idx][0]][:, 0]
-            data_sample_abp = f[f[f"Part_{partition_idx+1}"][sample_idx][0]][:, 1]
+            ori_data_sample_ppg = f[f[f"Part_{partition_idx+1}"][sample_idx][0]][:, 0]
+            ori_data_sample_abp = f[f[f"Part_{partition_idx+1}"][sample_idx][0]][:, 1]
 
             abp_max = 200
             abp_min = 50
             ppg_max = 4.003
             ppg_min = 0.0
 
-            original_freq = 150
-            target_freq = 1000
+            original_freq = 125
+            target_freq = 250
 
             upsample_factor = target_freq/original_freq
 
@@ -118,3 +118,39 @@ class UCIBPDataset(Dataset):
             data_sample_abp = resample(data_sample_abp[:1024], int(upsample_factor*1024)).astype(np.float32)
 
             return data_sample_ppg[:1024], data_sample_abp[:1024]
+
+
+class UCIBPDatasetRaw(Dataset):
+
+    def __init__(self, root_dir):
+        self.root = root_dir
+        self.count = []
+
+        for i in range(0, 4):
+            with h5py.File(f"{self.root}/Part_{i+1}.mat", "r") as f:
+                self.count.append(len(f[f"Part_{i+1}"]))
+
+    def __len__(self):
+        return sum(self.count)
+
+    def __getitem__(self, idx):
+        partition_idx = idx//3000 
+        sample_idx = idx%3000
+
+        with h5py.File(f"{self.root}/Part_{partition_idx+1}.mat", "r") as f:
+            ori_data_sample_ppg = f[f[f"Part_{partition_idx+1}"][sample_idx][0]][:, 0]
+            ori_data_sample_abp = f[f[f"Part_{partition_idx+1}"][sample_idx][0]][:, 1]
+
+            abp_max = 200
+            abp_min = 50
+            ppg_max = 4.003
+            ppg_min = 0.0
+
+            original_freq = 125
+            target_freq = 250
+
+            upsample_factor = target_freq/original_freq
+            data_sample_ppg = resample(ori_data_sample_ppg, int(upsample_factor*len(ori_data_sample_ppg))).astype(np.float32)
+            data_sample_abp = resample(ori_data_sample_abp, int(upsample_factor*len(ori_data_sample_abp))).astype(np.float32)
+
+            return data_sample_ppg, data_sample_abp, ori_data_sample_ppg, ori_data_sample_abp
