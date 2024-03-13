@@ -154,3 +154,19 @@ class UCIBPDatasetRaw(Dataset):
             data_sample_abp = resample(ori_data_sample_abp, int(upsample_factor*len(ori_data_sample_abp))).astype(np.float32)
 
             return data_sample_ppg, data_sample_abp, ori_data_sample_ppg, ori_data_sample_abp
+        
+
+class UCIBPDatasetNPY(Dataset):
+    def __init__(self, root_dir):
+        self.root = root_dir
+        self.abp_samples = np.load(f"{self.root}/abp_samples.npy")
+        self.ppg_samples = np.load(f"{self.root}/ppg_samples.npy")
+        self.pressures = np.load(f"{self.root}/pressures.npy")
+
+
+    def __len__(self):
+        return self.abp_samples.shape[0]
+    
+    def __getitem__(self, idx):
+        return self.ppg_samples[idx], self.abp_samples[idx], self.pressures[idx]
+    
