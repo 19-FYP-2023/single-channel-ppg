@@ -9,3 +9,4 @@ models/__pycache__/log.cpython-311.pyc
 models/__pycache__/tempfile.cpython-311.pyc
 models/__pycache__/unet_tranformer.cpython-311.pyc
 result-images/
+temp.csv

@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 from models.unet_tranformer import PPGUnet
 from models.custom_dataloader import ENTCDataset
 from models.custom_dataloader import UCIBPDataset
+from models.custom_dataloader import UCIBPDatasetNPY
 from models.log import readable_time
 from models.resample import resample
 from torch.optim.lr_scheduler import ExponentialLR
@@ -88,10 +89,15 @@ def train_entc():
             model_save_path = f"checkpoints/vatta-pitta/PPGUnet_epoch{epoch}.pth"
             torch.save(model.state_dict(), model_save_path)
 
-def train_ucibp():
-        
+def train_ucibp(dataset="ucibp"):
+
         # dataset configuration
-        UCIBP_dataset = UCIBPDataset("dataset/uci-bp")
+
+        if dataset == "ucibp":
+            UCIBP_dataset = UCIBPDataset("dataset/uci-bp")
+        elif dataset == "ucibp-npy":
+            UCIBP_dataset = UCIBPDatasetNPY("dataset/uci-bp-processed")
+            
         train_dataset, valid_dataset, test_dataset = random_split(UCIBP_dataset, [0.6, 0.2, 0.2], generator=torch.Generator().manual_seed(42))
 
         # model configuration
@@ -102,16 +108,21 @@ def train_ucibp():
         scheduler = ExponentialLR(optimizer, gamma=0.992354)
 
         # dataloader configuration
-        train_dataloader = DataLoader(train_dataset, batch_size=8, shuffle=True)
-        valid_dataloader = DataLoader(valid_dataset, batch_size=8, shuffle=False)
-        test_dataloader = DataLoader(test_dataset, batch_size=8, shuffle=False)
+        train_dataloader = DataLoader(train_dataset, batch_size=128, shuffle=True)
+        valid_dataloader = DataLoader(valid_dataset, batch_size=128, shuffle=False)
+        test_dataloader = DataLoader(test_dataset, batch_size=128, shuffle=False)
 
         for epoch in range(num_epochs):
             model.train()
             train_loss = 0.0
             for i, data_sample in enumerate(train_dataloader):
+                print(i)
                 
-                input, target = data_sample
+                if dataset=="ucibp":
+                    input, target = data_sample
+
+                elif dataset=="ucibp-npy":
+                    input, target, pressures = data_sample
 
                 input = input.unsqueeze(1).to(device)
                 target = target.unsqueeze(1).to(device)
@@ -138,8 +149,12 @@ def train_ucibp():
 
             with torch.no_grad():
                 for i, data_sample in enumerate(valid_dataloader):
+                    
+                    if dataset=="ucibp":
+                        input, target = data_sample
 
-                    input, target = data_sample
+                    elif dataset=="ucibp-npy":
+                        input, target, pressures = data_sample
 
                     input = input.unsqueeze(1).to(device)
                     target = target.unsqueeze(1).to(device)
@@ -164,10 +179,12 @@ def main(train_dataset="entc"):
     if train_dataset == "entc":
         train_entc()
     elif train_dataset == "ucibp":
-        train_ucibp()
+        train_ucibp(dataset="ucibp")
+    elif train_dataset=="ucibp-npy":
+        train_ucibp(dataset="ucibp-npy")
 
 
 
 
 if __name__ == "__main__":
-    main(train_dataset="ucibp")
+    main(train_dataset="ucibp-npy")
