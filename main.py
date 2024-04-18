@@ -59,7 +59,7 @@ def train_entc():
         train_loss = train_loss / len(train_dataloader.dataset)
 
         logging.info(f"Epoch {epoch+1} / {num_epochs}, Train Loss: {train_loss:.4f}")
-        print(f"Epoch {epoch+1} / {num_epochs}, Train Loss: {train_loss:.4f}")
+        # print(f"Epoch {epoch+1} / {num_epochs}, Train Loss: {train_loss:.4f}")
 
         # Adjusting learning rate
         scheduler.step()
@@ -83,7 +83,7 @@ def train_entc():
         valid_loss = valid_loss / len(test_dataloader.dataset)
         
         logging.info(f"Epoch {epoch+1} / {num_epochs}, Valid Loss: {valid_loss:.4f}")
-        print(f"Epoch {epoch+1} / {num_epochs}, Valid Loss: {valid_loss:.4f}")
+        # print(f"Epoch {epoch+1} / {num_epochs}, Valid Loss: {valid_loss:.4f}")
 
         # Change save directory based on the experiment
         if (epoch+1) % 5 == 0:
@@ -92,6 +92,9 @@ def train_entc():
 
 def train_ucibp(dataset="ucibp"):
 
+        logging.info(f"Normalized the output")
+        logging.info(f"Batch size changed to 128 -> 256")
+        logging.info(f"Train test split changed form 0.6-0.2-0.2 to 0.8-0.1-0.1")
         # dataset configuration
 
         if dataset == "ucibp":
@@ -99,7 +102,7 @@ def train_ucibp(dataset="ucibp"):
         elif dataset == "ucibp-npy":
             UCIBP_dataset = UCIBPDatasetNPY("dataset/uci-bp-processed")
             
-        train_dataset, valid_dataset, test_dataset = random_split(UCIBP_dataset, [0.6, 0.2, 0.2], generator=torch.Generator().manual_seed(42))
+        train_dataset, valid_dataset, test_dataset = random_split(UCIBP_dataset, [0.8, 0.1, 0.1], generator=torch.Generator().manual_seed(42))
 
         # model configuration
         num_epochs = 300
@@ -109,15 +112,14 @@ def train_ucibp(dataset="ucibp"):
         scheduler = ExponentialLR(optimizer, gamma=0.992354)
 
         # dataloader configuration
-        train_dataloader = DataLoader(train_dataset, batch_size=128, shuffle=True)
-        valid_dataloader = DataLoader(valid_dataset, batch_size=128, shuffle=False)
-        test_dataloader = DataLoader(test_dataset, batch_size=128, shuffle=False)
+        train_dataloader = DataLoader(train_dataset, batch_size=256, shuffle=True)
+        valid_dataloader = DataLoader(valid_dataset, batch_size=256, shuffle=False)
+        test_dataloader = DataLoader(test_dataset, batch_size=256, shuffle=False)
 
         for epoch in range(num_epochs):
             model.train()
             train_loss = 0.0
             for i, data_sample in enumerate(train_dataloader):
-                print(i)
                 
                 if dataset=="ucibp":
                     input, target = data_sample
@@ -126,7 +128,8 @@ def train_ucibp(dataset="ucibp"):
                     input, target, pressures = data_sample
 
                 input = input.unsqueeze(1).to(device)
-                target = target.unsqueeze(1).to(device)
+                # Divide target by 200 to normalize
+                target = target.unsqueeze(1).to(device)/200
 
                 optimizer.zero_grad()
                 output = model(input)
@@ -139,7 +142,7 @@ def train_ucibp(dataset="ucibp"):
             train_loss = train_loss / len(train_dataloader.dataset)
 
             logging.info(f"Epoch {epoch+1} / {num_epochs}, Train Loss: {train_loss:.4f}")
-            print(f"Epoch {epoch+1} / {num_epochs}, Train Loss: {train_loss:.4f}")
+            # print(f"Epoch {epoch+1} / {num_epochs}, Train Loss: {train_loss:.4f}")
 
             # Adjusting learning rate
             scheduler.step()
@@ -158,7 +161,8 @@ def train_ucibp(dataset="ucibp"):
                         input, target, pressures = data_sample
 
                     input = input.unsqueeze(1).to(device)
-                    target = target.unsqueeze(1).to(device)
+                    # Divide target by 200 to normalize
+                    target = target.unsqueeze(1).to(device)/200
 
                     output = model(input)
                     loss = criterion(output, target)
@@ -167,12 +171,12 @@ def train_ucibp(dataset="ucibp"):
             valid_loss = valid_loss / len(test_dataloader.dataset)
             
             logging.info(f"Epoch {epoch+1} / {num_epochs}, Valid Loss: {valid_loss:.4f}")
-            print(f"Epoch {epoch+1} / {num_epochs}, Valid Loss: {valid_loss:.4f}")
+            # print(f"Epoch {epoch+1} / {num_epochs}, Valid Loss: {valid_loss:.4f}")
 
             # Change save directory based on the experiment
-            # if (epoch+1) % 5 == 0:
-            #     model_save_path = f"checkpoints/vatta-pitta/PPGUnet_epoch{epoch}.pth"
-            #     torch.save(model.state_dict(), model_save_path)
+            if (epoch+1) % 5 == 0:
+                model_save_path = f"checkpoints/ucibp-npy-normalized/PPGUnet_epoch{epoch}.pth"
+                torch.save(model.state_dict(), model_save_path)
 
 
 def train_ucibp_finetune(fine_tune_param = "sbp"):
@@ -187,7 +191,7 @@ def train_ucibp_finetune(fine_tune_param = "sbp"):
     test_dataloader = DataLoader(test_dataset, batch_size=128, shuffle=False)
 
     model = PPGUnet(in_channels=1).to(device)
-    model.load_state_dict(torch.load("checkpoints/uci-bp/PPGUnet_epoch299.pth"))
+    model.load_state_dict(torch.load("checkpoints/ucibp-npy/PPGUnet_epoch299.pth"))
 
     for param in model.parameters():
         param.requires_grad = False
@@ -258,8 +262,8 @@ def train_ucibp_finetune(fine_tune_param = "sbp"):
 
         # Change save directory based on the experiment
         if (epoch+1) % 2 == 0:
-            model_save_path = f"checkpoints/uci-bp-finetuned/PPGUnet_finetune_{fine_tune_param}_epoch{epoch}.pth"
-            torch.save(model.state_dict(), model_save_path)
+            model_save_path = f"checkpoints/ucibp-finetune/{fine_tune_param}/PPGUnet_finetune_{fine_tune_param}_epoch{epoch}.pth"
+            torch.save(aggregated_model[1].state_dict(), model_save_path)
 
 
 
@@ -273,10 +277,11 @@ def main(train_dataset="entc"):
     elif train_dataset=="ucibp-finetune":
         train_ucibp_finetune(fine_tune_param="sbp")
         train_ucibp_finetune(fine_tune_param="dbp")
-        train_ucibp_finetune(fine_tune_param="map")
+        # train_ucibp_finetune(fine_tune_param="map")
 
 
 
 
 if __name__ == "__main__":
+    # main(train_dataset="ucibp-finetune")
     main(train_dataset="ucibp-npy")
