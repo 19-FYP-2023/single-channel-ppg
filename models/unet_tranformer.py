@@ -17,17 +17,17 @@ class DoubleConv(nn.Module):
             self.double_conv = nn.Sequential(
                 nn.Conv1d(in_channels, mid_channels, kernel_size=kernel_size, stride=first_stride, padding=first_padding), 
                 nn.BatchNorm1d(mid_channels),
-                nn.ReLU(inplace=True),
+                nn.ReLU(inplace=False),
                 nn.Conv1d(mid_channels, out_channels, kernel_size=kernel_size, stride=second_stride, padding=second_padding)
             )
 
         else: 
             self.double_conv = nn.Sequential(
                 nn.BatchNorm1d(in_channels),
-                nn.ReLU(inplace=True),
+                nn.ReLU(inplace=False),
                 nn.Conv1d(in_channels, mid_channels, kernel_size=kernel_size, stride=first_stride, padding=first_padding), 
                 nn.BatchNorm1d(mid_channels),
-                nn.ReLU(inplace=True),
+                nn.ReLU(inplace=False),
                 nn.Conv1d(mid_channels, out_channels, kernel_size=kernel_size, stride=second_stride, padding=second_padding)
             )
 
@@ -50,10 +50,10 @@ class Bottleneck(nn.Module):
  
         self.double_conv = nn.Sequential(
             nn.BatchNorm1d(in_channels),
-            nn.ReLU(inplace=True),
+            nn.ReLU(inplace=False),
             nn.Conv1d(in_channels, mid_channels, kernel_size=kernel_size, stride=first_stride, padding=first_padding), 
             nn.BatchNorm1d(mid_channels),
-            nn.ReLU(inplace=True),
+            nn.ReLU(inplace=False),
             nn.Conv1d(mid_channels, out_channels, kernel_size=kernel_size, stride=second_stride, padding=second_padding)
         )
 
@@ -173,6 +173,8 @@ class PPGUnet(nn.Module):
         self.feedforward = FeedForwardLayer()
 
     def forward(self,x):
+
+        # print(x.shape, x.dtype, x.device)
         down_conv1 = self.down_conv_layer1(x)
         down_conv2 = self.down_conv_layer2(down_conv1)
         down_conv3 = self.down_conv_layer3(down_conv2)
